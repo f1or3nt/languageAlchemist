@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Traducteur de Mots</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        #container {
+            background-color: #ffffff;
+            max-width: 80%;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #d4d4d4;
+            border-radius: 5px;
+        }
+
+        .description {
+            margin-top: 20px;
+            max-width: 80%;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #d4d4d4;
+            background-color: #ffffff;
+            text-align: left;
+        }
+        .description h2 {
+            text-align: center;
+        }
+
+        #langueInput {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .autocomplete {
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            position: absolute;
+            background-color: #ffffff;
+            border: 1px solid #d4d4d4;
+            border-radius: 5px;
+            width: 100%; /* Largeur adaptée à la page */
+            max-width: 60%; /* Limiter la largeur à 80% de la page */
+            left: 50%; /* Centrer horizontalement */
+            transform: translateX(-50%); /* Ajuster pour le centrage */
+        }
+
+        .autocomplete div {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .autocomplete div:hover {
+            background-color: #f1f1f1;
+        }
+
+        #translations {
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        #translations p {
+            margin: 10px 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="description">
+        <h2>Command Descriptions:</h2>
+        <p>Le lanceur de sorts donne un ordre à la cible et celle-ci y obéit fidèlement et aussi tôt que possible. Il peut choisir l’une des options suivantes.</p>
+        <p><strong>Approche:</strong> À son tour, le sujet se déplace vers le personnage pendant un round, aussi vite que possible et en empruntant le chemin le plus direct. Il ne fait rien d’autre que se déplacer, et, le cas échéant, ce mouvement peut provoquer des attaques d’opportunité.</p>
+        <p><strong>Fuis:</strong> À son tour, le sujet s’éloigne du personnage pendant un round, aussi vite que possible. Il ne fait rien d’autre que se déplacer et, le cas échéant, ce mouvement peut provoquer des attaques d’opportunité.</p>
+        <p><strong>Halte:</strong> Le sujet ne bouge plus pendant 1 round. Il n’entreprend aucune action mais n’est pas sans défense pour autant.</p>
+        <p><strong>Lâche:</strong> À son tour, le sujet lâche tout ce qu’il tient. Il ne peut ramasser aucun de ces objets avant son prochain tour.</p>
+        <p><strong>Tombe:</strong> À son tour, le sujet tombe au sol et reste à terre pendant 1 round. Il peut agir selon ses désirs pendant qu’il est sur le sol mais subit alors les malus habituels.</p>
+    </div>
+    
+
+    <div id="container">
+        <h1>Sélectionnez une langue :</h1>
+        <input type="text" id="langueInput" placeholder="Recherchez une langue...">
+        <div class="autocomplete" id="langueAutocomplete"></div>
+
+        <div id="translations">
+            <h2>Résultats de traduction :</h2>
+            <p>Approche: <span id="translationApproche"></span></p>
+            <p>Lâche: <span id="translationLâche"></span></p>
+            <p>Tombe: <span id="translationTombe"></span></p>
+            <p>Fuis: <span id="translationFuis"></span></p>
+            <p>Halte: <span id="translationHalte"></span></p>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            "abyssal": { Approche: "આગળ આવો (Aagala Aavo)", Lâche: "ગીરવું (Giravuṁ)", Tombe: "પડી (Paḍī)", Fuis: "મુકવું (Mukavuṁ)", Halte: "થમાવો (Thamāvo)" },
+            "aérien": { Approche: "దిగించు (Digincu)", Lâche: "పడుచు (Paducu)", Tombe: "పడుతుంది (Padutunḍi)", Fuis: "పారిపోయు (Pāri pōyu)", Halte: "ఆపు (Āpu)" },
+            "aklo": { Approche: "мөрөөс гар (möröös gar)", Lâche: "зоос (zoos)", Tombe: "барих (barikh)", Fuis: "алчих (alkhikh)", Halte: "зогсоо (zogsoo)" },
+            "ancien osiriens": { Approche: "געהן (gëhn)", Lâche: "פֿאַרזאַמלען (farzamlen)", Tombe: "פֿאַרפֿירן (farfirn)", Fuis: "ווײַכן (vaykhn)", Halte: "אַרויף (aroyf)" },
+            "aquatique": { Approche: "समीप (Samīp)", Lâche: "पड़ (Paṛ)", Tombe: "गिरना (Girnā)", Fuis: "भागना (Bhāgnā)", Halte: "रुकें (Rukeṁ)" },
+            "azlant": { Approche: "Accede", Lâche: "Laxa", Tombe: "Cade", Fuis: "Effugio", Halte: "Sisto" },
+            "céleste": { Approche: "ಹತೋಟಿ (Hatōṭi)", Lâche: "ನೆಟ್ಟಿಯ (Neṭṭiya)", Tombe: "ಬಿದ್ದು (Biddu)", Fuis: "ದಾಳು (Dāḷu)", Halte: "ನಿಲ್ಲಿಸು (Nil̤l̤isu)" },           
+            "commun des profondeurs": { Approche: "Proksimiĝi", Lâche: "Ĵeti", Tombe: "Fali", Fuis: "Kaŝiĝi", Halte: "Haltei" },
+            "cyclope": { Approche: "Approche", Lâche: "Lâche", Tombe: "Tombe", Fuis: "Fuis", Halte: "Halte" },
+            "draconique": { Approche: "Πλησιάστε (Plisíaste)", Lâche: "Ρίξτε (Ríxte)", Tombe: "Πέστε (Péste)", Fuis: "Τρέξτε (Tréxte)", Halte: "Σταματήστε (Stamatíste)" },
+            "druidique": { Approche: "მომხიარე (momxiare)", Lâche: "ჩააგდე (chaagde)", Tombe: "წავა (ts’ava)", Fuis: "გაჩერდე (gacherde)", Halte: "დააჩერე (daachere)" },
+            "elfique": { Approche: "অবসর (Ôbôsar)", Lâche: "নামান (Nāmān)", Tombe: "পড়া (Poṛa)", Fuis: "পালাও (Pālā'o)", Halte: "নির্বাণ (Nirbāṇa)" },
+            "géant": { Approche: "Lähene", Lâche: "Lase", Tombe: "Kukkumine", Fuis: "Põgene", Halte: "Seiska" },
+            "gnoll": { Approche: "Iza ezen", Lâche: "Dordatu", Tombe: "Eratu", Fuis: "Irkia", Halte: "Eten" },
+            "gnome": { Approche: "Nærme sig", Lâche: "Falde", Tombe: "Falde", Fuis: "Flygte", Halte: "Stop" },
+            "gobelin": { Approche: "Približiti se", Lâche: "Pad", Tombe: "Padati", Fuis: "Pobeći", Halte: "Zaustaviti se" },
+            "halfelin": { Approche: "Aproximare", Lâche: "Cădere", Tombe: "Cădere", Fuis: "Fugi", Halte: "Opri" },
+            "hallit": { Approche: "Lähestyä", Lâche: "Putoaa", Tombe: "Pudota", Fuis: "Paeta", Halte: "Pysäytä" },
+            "igné": { Approche: "આગળ આવો (Aagala Aavo)", Lâche: "ગીરવું (Giravuṁ)", Tombe: "પડી (Paḍī)", Fuis: "મુકવું (Mukavuṁ)", Halte: "થમાવો (Thamāvo)" },
+            "infernal": { Approche: "आगे आइए (Āge ā'ie)", Lâche: "गिराना (Girānā)", Tombe: "गिर (Gir)", Fuis: "भागना (Bhāganā)", Halte: "रुकें (Rukeṁ)" },
+            "jistka": { Approche: "Annäherung", Lâche: "Tombeen", Tombe: "Tombeen", Fuis: "Fliehen", Halte: "Halte" },
+            "kéléshite": { Approche: "اقترب (iqtarab)", Lâche: "اسقط (isqat)", Tombe: "سقط (saqt)", Fuis: "هرب (harab)", Halte: "وقف (waqaf)" },           
+            "langue de l'ombre": { Approche: "આગળ આવો (Aagala Aavo)", Lâche: "ગીરવું (Giravuṁ)", Tombe: "પડી (Paḍī)", Fuis: "મુકવું (Mukavuṁ)", Halte: "થમાવો (Thamāvo)" },
+            "nain": { Approche: "Nálaga", Lâche: "Fella", Tombe: "Tombea", Fuis: "Flýja", Halte: "Staða" },
+            "nécril": { Approche: "مقاربه (maqaraba)", Lâche: "قطره (qatra)", Tombe: "سقوط (suqut)", Fuis: "فرار (furar)", Halte: "توقف (tawaqquf)" },
+            "orque": { Approche: "Megközelítés", Lâche: "Ejtés", Tombe: "Eszik", Fuis: "Menekül", Halte: "Állj meg" },
+            "orvien": { Approche: "Accede", Lâche: "Laxa", Tombe: "Cade", Fuis: "Effugio", Halte: "Sisto" },
+            "osirien": { Approche: "נגע (Nage)", Lâche: "להפליט (Lehafleat)", Tombe: "נפילה (Nefila)", Fuis: "ברח (Barach)", Halte: "עצר (Atzar)" },
+            "polyglotte": { Approche: "Karapproche", Lâche: "Lès", Tombe: "Tonbe", Fuis: "Kouri", Halte: "Koupe" },
+            "russe": { Approche: "Приближение (Priblizheniye)", Lâche: "Падение (Padeniye)", Tombe: "Падение (Padeniye)", Fuis: "Бежать (Bezhat')", Halte: "Остановить (Ostanovit')" },
+            "scalde": { Approche: "Nærme seg", Lâche: "Tombee", Tombe: "Tombee", Fuis: "Flykte", Halte: "Stopp" },
+            "shoanti": { Approche: "Pendekatan", Lâche: "Jatuh", Tombe: "Jatuh", Fuis: "Melarikan diri", Halte: "Hentikan" },
+            "sylvestre": { Approche: "การเข้า (Kār khêā)", Lâche: "ตก (Tạk)", Tombe: "ตก (Tạk)", Fuis: "หนี (H̄nī)", Halte: "หยุด (H̄yud)" },
+            "tekritanine": { Approche: "نزدیک شدن (Nazdik shodan)", Lâche: "افتادن (Aftadan)", Tombe: "افتادن (Aftadan)", Fuis: "فرار کردن (Faraar kardan)", Halte: "متوقف (Motavuq)" },
+            "terreux": { Approche: "आगे आइए (Āge ā'ie)", Lâche: "गिराना (Girānā)", Tombe: "गिर (Gir)", Fuis: "भागना (Bhāganā)", Halte: "रुकें (Rukeṁ)" },
+            "thassilonien": { Approche: "接近 (Jiējìn)", Lâche: "掉 (Diào)", Tombe: "下跌 (Xiàdiē)", Fuis: "逃跑 (Táopǎo)", Halte: "停止 (Tíngzhǐ)" },
+            "varisien": { Approche: "Approccio", Lâche: "Cadere", Tombe: "Caduta", Fuis: "Fuggi", Halte: "Fermati" },
+            "vuldrain": { Approche: "قریبی (Qaribi)", Lâche: "گراو (Giraav)", Tombe: "گرنا (Girna)", Fuis: "بھاگنا (Bhagna)", Halte: "رکنا (Rukna)" }
+            // Ajoutez ici les autres traductions pour les langues
+        };
+
+        const langueInput = document.getElementById("langueInput");
+        const langueAutocomplete = document.getElementById("langueAutocomplete");
+        const translationApproche = document.getElementById("translationApproche");
+        const translationLâche = document.getElementById("translationLâche");
+        const translationTombe = document.getElementById("translationTombe");
+        const translationFuis = document.getElementById("translationFuis");
+        const translationHalte = document.getElementById("translationHalte");
+
+        langueInput.addEventListener("input", function () {
+            const inputText = langueInput.value.toLowerCase();
+            const suggestions = Object.keys(translations).filter(langue => langue.toLowerCase().includes(inputText));
+            displayAutocompleteSuggestions(suggestions);
+        });
+
+        langueAutocomplete.addEventListener("click", function (e) {
+            if (e.target && e.target.textContent) {
+                const selectedLangue = e.target.textContent;
+                langueInput.value = selectedLangue;
+                updateTranslation(selectedLangue);
+                clearAutocompleteSuggestions();
+            }
+        });
+
+        function displayAutocompleteSuggestions(suggestions) {
+            const suggestionList = suggestions.map(langue => `<div>${langue}</div>`).join("");
+            langueAutocomplete.innerHTML = suggestionList;
+            if (suggestions.length > 0) {
+                langueAutocomplete.style.display = "block";
+            } else {
+                clearAutocompleteSuggestions();
+            }
+        }
+
+        function clearAutocompleteSuggestions() {
+            langueAutocomplete.style.display = "none";
+        }
+
+        function updateTranslation(langue) {
+            const translation = translations[langue];
+            translationApproche.textContent = translation.Approche;
+            translationLâche.textContent = translation.Lâche;
+            translationTombe.textContent = translation.Tombe;
+            translationFuis.textContent = translation.Fuis;
+            translationHalte.textContent = translation.Halte;
+        }
+    </script>
+</body>
+</html>
+
